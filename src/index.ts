@@ -1,4 +1,7 @@
-import { App } from '@microsoft/teams.apps';
+import http from 'http';
+import express from 'express';
+
+import { App, HttpPlugin } from '@microsoft/teams.apps';
 import { BotBuilderPlugin } from '@microsoft/teams.botbuilder';
 import { DevtoolsPlugin } from '@microsoft/teams.dev';
 import { ConfigurationBotFrameworkAuthentication, ConfigurationServiceClientCredentialFactory, TeamsActivityHandler, TurnContext } from 'botbuilder';
@@ -21,7 +24,6 @@ class ActivityHandler extends TeamsActivityHandler {
 }
 
 const handler = new ActivityHandler();
-
 const adapter = new CloudAdapter(
   new ConfigurationBotFrameworkAuthentication(
     {},
@@ -35,16 +37,27 @@ const adapter = new CloudAdapter(
 // Create BotBuilder plugin with simple ActivityHandler
 const botBuilderPlugin = new BotBuilderPlugin({ adapter, handler });
 
+// example of custom server definition
+const expressApp = express();
+expressApp.get('/hi', (_, res) => res.send('hi!'));
+
 const app = new App({
   plugins: [
     new DevtoolsPlugin(),
     botBuilderPlugin,
+    //Bring your own server
+    new HttpPlugin(http.createServer(expressApp))
   ],
 });
 
 app.on('message', async ({ send, activity }) => {
   await send({ type: 'typing' });
   await send(`you said: "${activity.text}"`);
+});
+
+// example of adding endpoints to app server via app.http.*
+app.http.post('/create-something', (_, res) => {
+  res.send('...');
 });
 
 (async () => {
